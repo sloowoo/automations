@@ -5,7 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import time
-from selenium.webdriver.chrome.service import Service
+import regex as re
 
 
 #put your own here
@@ -15,20 +15,19 @@ password = "222"
 website = 'https://accounts.veracross.com/williston/portals/login'
 
 
-#uncomment this part and comment driver=webdriver.Chrome()
-#to hide chrome window
 
-# op = webdriver.ChromeOptions()
-# op.add_argument("--headless=new")
-# #for now, the headless window option makes a blank window pop up
-# #the temp solution is to just move the window far off screen
-# #fix has already been merged but may not be implemented until later vers
-# #https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
-# op.add_argument("--window-position=-2400,-2400")
-# driver = webdriver.Chrome(options=op)
+#to hide chrome window
+op = webdriver.ChromeOptions()
+op.add_argument("--headless=new")
+#for now, the headless window option makes a blank window pop up
+#the temp solution is to just move the window far off screen
+#fix has already been merged but may not be implemented until later vers
+#https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
+op.add_argument("--window-position=-2400,-2400")
+driver = webdriver.Chrome(options=op)
 
 #to see physical chrome window
-driver = webdriver.Chrome()
+# driver = webdriver.Chrome()
                           
 # driver = webdriver.Chrome()
 driver.get(website)
@@ -120,6 +119,7 @@ def assignment_scrape():
 
                 WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'close'))).click()
                 time.sleep(0.05)
+                
 
 #scrape portal page event
 def scrape_events():
@@ -128,19 +128,35 @@ def scrape_events():
     portal = BeautifulSoup(driver.page_source, features="html.parser")
     today =  portal.find("div", {"class":"day today"})
     today_events = today.find_all("a", {"class":"event-link"})
+    
+    #types of events
     for event in today_events:
-        #don't print out assignments in calendar
+        event_types = ["WC", "REED", "LAS"]
+        
+        #don't print out assignments
         try: 
             if "assignment" in event['href']:
                 continue
         except:
             pass
-        print(event.text)
-                
-
+        
+        #print diff text based on type of event
+        for type in event_types:
+            if type in event.text:
+                match type:
+                    case "WC":
+                        print("WRITING CENTER: " + event.text[3:10] + event.text[21:])
+                    case "REED":
+                        print("DOD in reed: " + event.text)
+                    case "LAS":
+                        print("DOD in LAS: " + event.text[3:10] + event.text[22:])
+                    case _:
+                        print(event.text)
+        
+         
 #scrape_events()        
-# assignment_scrape()  
+#assignment_scrape()  
 
-
-while(True):
-    pass
+driver.quit()
+# while(True):
+#     pass
