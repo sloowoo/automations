@@ -120,43 +120,93 @@ def assignment_scrape():
                 WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'close'))).click()
                 time.sleep(0.05)
                 
+                
+#prints diff text based on the type of event
+def type_match(type, event):
+    match type:
+        case "WC":
+            print("WC: " + event.text[3:10] + event.text[21:])
+
+        case "Reed":
+            print("DOD in Reed: " + event.text[3:10] + event.text[23:])
+            
+        case "REED":
+            return
+ 
+        case "LAS":
+            print("DOD in LAS: " + event.text[3:10] + event.text[22:])
+
+        case "MRC":
+            print("MRC: " + event.text[3:10] + event.text[22:])
+
+        case "SRC":
+            print("SRC: " + event.text[3:10] + event.text[22:])
+        case _:
+            return
+                
+                
 
 #scrape portal page event
 def scrape_events():
     driver.get("https://portals.veracross.com/williston/student")
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'event-link')))
     portal = BeautifulSoup(driver.page_source, features="html.parser")
-    today =  portal.find("div", {"class":"day today"})
-    today_events = today.find_all("a", {"class":"event-link"})
+   
+    #find all days in calendar
+    day_tags = portal.find_all("div", {"class":"day"})
+
+    for day in day_tags:
     
-    #types of events
-    for event in today_events:
-        event_types = ["WC", "REED", "LAS"]
+        date = day.find("div", {"class":"day-header"})
+        events = day.find_all("a", {"class":"event-link"})
         
-        #don't print out assignments
-        try: 
-            if "assignment" in event['href']:
-                continue
-        except:
-            pass
+        #skip day if no events
+        if len(events) == 0:
+            continue
         
-        #print diff text based on type of event
-        for type in event_types:
-            if type in event.text:
-                match type:
-                    case "WC":
-                        print("WRITING CENTER: " + event.text[3:10] + event.text[21:])
-                    case "REED":
-                        print("DOD in reed: " + event.text)
-                    case "LAS":
-                        print("DOD in LAS: " + event.text[3:10] + event.text[22:])
-                    case _:
-                        print(event.text)
-        
-         
+        #print dates with blue or green if it says
+        if "Blue" in events[0].text or "Green" in events[0].text:
+            print('\n' + "-----------------")
+            print(date.text + ' ' + events[0].text + '\n')
+        else:
+            print('\n' + "-----------------")
+            print(date.text + '\n')
+
+        #most common types of calendar shit 
+        event_types = ["WC", "Reed", "REED", "LAS", "MRC", "SRC"]
+
+        #loop through every event in a day column
+        for event in events:
+            #dont print if the event is an assignment
+            try: 
+                if "assignment" in event['href']:
+                    continue
+            except:
+                pass
+            
+            found_type = False
+            #loops through all the most common types of events
+            #if not a common type then found_type stays false
+            for type in event_types:
+                if type in event.text:
+                    #if found type print its custom text
+                    type_match(type, event)
+                    found_type = True
+                else:
+                    pass
+            
+            #just prints the event text raw if not a common type
+            if not found_type:
+                if "Blue" in event.text or "Green" in event.text:
+                    pass
+                else:
+                    print(event.text)
+                
+                
 #scrape_events()        
 #assignment_scrape()  
 
 driver.quit()
+
 # while(True):
 #     pass
