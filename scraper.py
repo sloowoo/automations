@@ -5,9 +5,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import time
-import tensorflow as tf
-tf.get_logger().setLevel('INFO')
-
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '3'
 
 #put your own here
 username = "111"
@@ -50,7 +49,11 @@ def strip(text):
 
 
 #assignment scraping function
-def assignment_scrape():
+#def assignment_scrape()
+    
+#have to fix this because it's currently listing all trimesters courses
+#need to figure out how to only list under "active"
+def list_courses():
     rough_course_links = []
     course_links = []
 
@@ -62,66 +65,75 @@ def assignment_scrape():
 
     #gets rid of link repeats
     course_links = list(set(rough_course_links))
+
+    course_titles = []
     for page in course_links:
         #/website is where all the assignments at
         if page.endswith("website"):
             driver.get(page)
+            main_page = BeautifulSoup(driver.page_source, features="html.parser")
+            course = main_page.find("h1")
+            course_titles.append("CLASS:" + strip(course.text))
 
+    i = 1
+    #prints out indexed course titles
+    for title in course_titles:
+        print(str(i) + ". " + title)
+        i += 1
+
+#gets all assignments under a course
+def find_assignments():
             #all the types of assignments
             all_shit =[]
             types = ["Homework", "Quiz", "Test", "Project", "Quest", "Lab", "Participation", "Lab", "Classwork"]
 
             for type in types:
                 all_shit += driver.find_elements(By.XPATH, "//span[text()='" + type + "']")
-
-            main_page = BeautifulSoup(driver.page_source, features="html.parser")
-
-            #finds the name of the course
-            course = main_page.find("h1")
     
-
-            #only print out the name if there are assignments or smth
             if len(all_shit) > 0:
-                print("-----------------" + '\n')
-                print("CLASS:" + strip(course.text))
+                list_assignments(all_shit)
+            else:
+                print("No assignments!")
 
-            #listing out assignments
-            for homework in all_shit:
-                homework.click()
-                WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'assignment-modal')))
+#prints all the found assignments
+def list_assignments(all_shit):
+    #listing out assignments
+        for homework in all_shit:
+            homework.click()
+            WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'assignment-modal')))
 
-                source = BeautifulSoup(driver.page_source, features="html.parser")
+            source = BeautifulSoup(driver.page_source, features="html.parser")
+            
+            #title of assignment
+            title = source.find("div", {"class":"title"})
+            rough1 = title.text
+            upcoming_type = strip(rough1) + "\n"
+            
+
+            #summary of assignment
+            summary = source.find("div", {"class":"assignment-description modal-description"})
+            rough2 = "summary: " + summary.text
+            upcoming_summary = strip(rough2) + "\n"
+
+            #get details of assignment
+            #not every one has this
+            try:
+                details = source.find("li", {"class":"assignment-notes"})
+                rough3 = "details: " + details.text
+                upcoming_details = strip(rough3) + "\n"
+            except:
+                upcoming_details = "no details posted."
                 
-                #title of assignment
-                title = source.find("div", {"class":"title"})
-                rough1 = title.text
-                upcoming_type = strip(rough1) + "\n"
-                
+            date = source.find("div", {"class":"assignment-due-date"})
+            rough4 = "due date: " + date.text
+            upcoming_date = strip(rough4) + "\n"
 
-                #summary of assignment
-                summary = source.find("div", {"class":"assignment-description modal-description"})
-                rough2 = "summary: " + summary.text
-                upcoming_summary = strip(rough2) + "\n"
+            #glue all that text
+            upcoming = upcoming_type + upcoming_date + upcoming_summary + upcoming_details
+            print(upcoming+'\n' + '----')
 
-                #get details of assignment
-                #not every one has this
-                try:
-                    details = source.find("li", {"class":"assignment-notes"})
-                    rough3 = "details: " + details.text
-                    upcoming_details = strip(rough3) + "\n"
-                except:
-                    upcoming_details = "no details posted."
-                    
-                date = source.find("div", {"class":"assignment-due-date"})
-                rough4 = "due date: " + date.text
-                upcoming_date = strip(rough4) + "\n"
-
-                #glue all that text
-                upcoming = upcoming_type + upcoming_date + upcoming_summary + upcoming_details
-                print(upcoming+'\n' + '----')
-
-                WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'close'))).click()
-                time.sleep(0.05)
+            WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'close'))).click()
+            time.sleep(0.05)
                 
                 
 #prints diff text based on the type of event
@@ -152,7 +164,7 @@ def type_match(type, event):
         case _:
             return
                 
-                
+#gets rid of the timestamp repeats in event listings
 def rid_repeats(string):
     result = ""
     letters = ["a ", "p "]
@@ -170,6 +182,7 @@ def rid_repeats(string):
         
 
 #scrape portal page event
+#have to input "today" or "all"
 def events_scrape(var):
     driver.get("https://portals.veracross.com/williston/student")
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'event-link')))
@@ -239,7 +252,8 @@ def events_scrape(var):
                 
                 
 #events_scrape("all")    
-assignment_scrape()
+
+
 
 driver.quit()
 
