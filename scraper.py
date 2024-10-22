@@ -5,7 +5,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import time
-import regex as re
+import tensorflow as tf
+tf.get_logger().setLevel('INFO')
 
 
 #put your own here
@@ -19,7 +20,8 @@ website = 'https://accounts.veracross.com/williston/portals/login'
 #to hide chrome window
 op = webdriver.ChromeOptions()
 op.add_argument("--headless=new")
-#for now, the headless window option makes a blank window pop up
+#for now, the headless window option makes a 
+# blank window pop up
 #the temp solution is to just move the window far off screen
 #fix has already been merged but may not be implemented until later vers
 #https://stackoverflow.com/questions/78996364/chrome-129-headless-shows-blank-window
@@ -27,9 +29,9 @@ op.add_argument("--window-position=-2400,-2400")
 driver = webdriver.Chrome(options=op)
 
 #to see physical chrome window
-# driver = webdriver.Chrome()
+#driver = webdriver.Chrome()
                           
-# driver = webdriver.Chrome()
+
 driver.get(website)
 
 #input username
@@ -45,6 +47,7 @@ WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, '//a[@
 #text formatter
 def strip(text):
     return "\n".join([ll.rstrip() for ll in text.splitlines() if ll.strip()])
+
 
 #assignment scraping function
 def assignment_scrape():
@@ -125,36 +128,67 @@ def assignment_scrape():
 def type_match(type, event):
     match type:
         case "WC":
-            print("WC: " + event.text[3:10] + event.text[21:])
+            text = "WC: " + event.text[3:10] + event.text[21:]
+            print(rid_repeats(text))
 
         case "Reed":
-            print("DOD in Reed: " + event.text[3:10] + event.text[23:])
+            text ="DOD in Reed: " + event.text[3:10] + event.text[23:]
+            print(rid_repeats(text))
             
         case "REED":
             return
  
         case "LAS":
-            print("DOD in LAS: " + event.text[3:10] + event.text[22:])
+            text ="DOD in LAS: " + event.text[3:10] + event.text[22:]
+            print(rid_repeats(text))
 
         case "MRC":
-            print("MRC: " + event.text[3:10] + event.text[22:])
+            text ="MRC: " + event.text[3:10] + event.text[22:]
+            print(rid_repeats(text))
 
         case "SRC":
-            print("SRC: " + event.text[3:10] + event.text[22:])
+            text ="SRC: " + event.text[3:10] + event.text[22:]
+            print(rid_repeats(text))
         case _:
             return
                 
                 
+def rid_repeats(string):
+    result = ""
+    letters = ["a ", "p "]
+    found_repeat = False
+    for letter in letters:
+        if letter in string and string.index(letter) < 4:
+                result = string[string.index(letter)+2:]
+                found_repeat = True
+                return result
+        else:
+            pass
+    
+    if not found_repeat:
+        return string
+        
 
 #scrape portal page event
-def scrape_events():
+def events_scrape(var):
     driver.get("https://portals.veracross.com/williston/student")
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'event-link')))
     portal = BeautifulSoup(driver.page_source, features="html.parser")
    
     #find all days in calendar
-    day_tags = portal.find_all("div", {"class":"day"})
+    day_tags_rough = portal.find_all("div", {"class":"day"})
+    
+    #gives user the choice to scrape events for all days or just current day
+    #all choice gets rid of first day in the arr cuz that's one day before the current day
+    day_tags = []
+    if var == "all":
+        day_tags = day_tags_rough[1:]
+    elif var == "today":
+        day_tags = day_tags_rough[1:2]
+    else:
+        day_tags = day_tags_rough[1:]
 
+    #skips the first day cuz that's one before the current date
     for day in day_tags:
     
         date = day.find("div", {"class":"day-header"})
@@ -200,11 +234,12 @@ def scrape_events():
                 if "Blue" in event.text or "Green" in event.text:
                     pass
                 else:
-                    print(event.text)
+                    text = event.text
+                    print(rid_repeats(text))
                 
                 
-#scrape_events()        
-#assignment_scrape()  
+#events_scrape("all")    
+assignment_scrape()
 
 driver.quit()
 
